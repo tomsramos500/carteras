@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dracma Asset Management | Terminal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #e2e8f0; }
+        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .card-hover:hover { transform: translateY(-4px); border-color: #3b82f6; box-shadow: 0 10px 40px -10px rgba(59, 130, 246, 0.3); transition: all 0.3s ease; cursor: pointer; }
+        #login-screen { transition: opacity 0.5s ease-out, visibility 0.5s; }
+        .hidden-login { opacity: 0; visibility: hidden; pointer-events: none; }
+        
+        /* ESTILOS CLAVE PARA PDF */
+        .pdf-fixed-width {
+            width: 750px !important;    /* Ancho exacto para A4 */
+            margin: 0 auto !important;  /* Centrado */
+            background-color: #0f172a !important; /* Fondo sólido oscuro */
+            border: none !important;
+            box-shadow: none !important;
+        }
+        
+        .pdf-grid-layout {
+            display: grid !important;
+            grid-template-columns: 45% 55% !important; /* Gráfico 45%, Tabla 55% */
+            gap: 20px !important;
+            align-items: center !important;
+        }
+        
+        .pdf-table-compact td, .pdf-table-compact th {
+            padding: 4px 8px !important; /* Celdas más compactas */
+            font-size: 10px !important;  /* Texto un poco más chico para que entre */
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col overflow-hidden" id="main-body">
+
+    <div id="login-screen" class="fixed inset-0 z-[100] bg-[#0f172a] flex flex-col items-center justify-center p-4">
+        <div class="glass-panel p-8 rounded-2xl w-full max-w-md border border-gray-700 shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent"></div>
+            <div class="text-center mb-8">
+                <i class="ph-fill ph-lock-key text-4xl text-blue-500 mb-4 inline-block"></i>
+                <h2 class="text-2xl font-bold text-white">Acceso Privado</h2>
+                <p class="text-gray-400 text-sm mt-2">Dracma Asset Management</p>
+            </div>
+            <form onsubmit="intentarLogin(event)" class="space-y-4">
+                <input type="text" id="input-user" class="w-full bg-slate-900 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-600" placeholder="Usuario">
+                <input type="password" id="input-pass" class="w-full bg-slate-900 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-600" placeholder="Contraseña">
+                <div id="error-msg" class="text-red-400 text-xs text-center hidden">Credenciales incorrectas</div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Ingresar</button>
+            </form>
+        </div>
+    </div>
+
+    <nav class="border-b border-gray-800 bg-slate-900/80 sticky top-0 z-30 backdrop-blur-md">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="ph-fill ph-chart-polar text-blue-500 text-2xl"></i>
+                <span class="text-lg md:text-xl font-bold tracking-tight text-white">Dracma <span class="text-blue-500">Asset Management</span></span>
+            </div>
+            <div class="hidden md:flex space-x-8 text-sm font-medium">
+                <a href="#carteras" class="text-gray-400 hover:text-white transition">Carteras</a>
+                <a href="#trades" class="text-gray-400 hover:text-white transition">Trade Ideas</a>
+                <button onclick="logout()" class="text-red-400 hover:text-red-300 transition text-xs border border-red-900/50 px-3 py-1 rounded bg-red-900/10">Salir</button>
+            </div>
+        </div>
+    </nav>
+
+    <header class="py-16 text-center container mx-auto px-6">
+        <h1 class="text-4xl md:text-5xl font-bold mb-4 text-white">Carteras Administradas</h1>
+        <p class="text-gray-400">Selecciona una cartera para ver el desglose detallado.</p>
+    </header>
+
+    <section id="carteras" class="container mx-auto px-6 mb-16">
+        <div id="portfolio-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </section>
+
+    <section id="trades" class="bg-slate-900/50 py-16 border-t border-gray-800">
+        <div class="container mx-auto px-6">
+            <h2 class="text-2xl font-bold text-white mb-8">Trade Ideas Recientes</h2>
+            <div id="trades-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+        </div>
+    </section>
+
+    <div id="portfolio-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closePortfolioModal()"></div>
+        <div class="relative bg-slate-900 border border-gray-700 rounded-2xl w-full max-w-5xl max-h-[95vh] overflow-y-auto shadow-2xl flex flex-col">
+            
+            <div class="flex justify-between items-center p-4 border-b border-gray-800 bg-slate-800/50 sticky top-0 z-10">
+                <h3 class="text-gray-400 text-sm font-mono">VISTA DE DETALLE</h3>
+                <div class="flex gap-2">
+                    <button id="btn-download-pdf" onclick="downloadPortfolioPDF()" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition font-medium">
+                        <i class="ph-bold ph-download-simple"></i> Descargar PDF
+                    </button>
+                    <button onclick="closePortfolioModal()" class="text-gray-400 hover:text-white p-2"><i class="ph-bold ph-x text-xl"></i></button>
+                </div>
+            </div>
+            
+            <div class="w-full flex justify-center bg-slate-900">
+                <div id="printable-area" class="p-8 md:p-12 text-white w-full transition-all duration-300">
+                    
+                    <div class="flex justify-between items-start mb-8 border-b border-gray-700 pb-6">
+                        <div>
+                            <span class="text-blue-500 font-bold text-sm tracking-widest uppercase">PORTAFOLIO</span>
+                            <h2 id="pm-title" class="text-3xl md:text-5xl font-bold mt-2">Nombre</h2>
+                            <p id="pm-desc" class="text-gray-400 mt-3 max-w-xl leading-relaxed text-lg">Descripción...</p>
+                        </div>
+                        <div class="text-right hidden sm:block">
+                            <div class="text-xl font-bold text-white">Dracma <span class="text-blue-500">Asset Management</span></div>
+                            <div id="pdf-timestamp" class="text-xs text-gray-500 mt-1 font-mono"></div>
+                        </div>
+                    </div>
+
+                    <div id="modal-content-grid" class="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+                        
+                        <div id="chart-container-div" class="h-80 w-full flex items-center justify-center relative">
+                            <canvas id="modal-chart"></canvas>
+                        </div>
+                        
+                        <div id="table-container-div" class="w-full">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="h-6 w-1 bg-blue-500 rounded-full"></div>
+                                <h4 class="text-lg font-bold">Composición de Activos</h4>
+                            </div>
+                            <div class="overflow-hidden rounded-xl border border-gray-700 bg-slate-800/30">
+                                <table class="w-full text-sm text-left">
+                                    <thead class="bg-slate-800 text-gray-400 uppercase font-mono text-xs tracking-wider">
+                                        <tr><th class="px-6 py-4">Activo</th><th class="px-6 py-4 text-right">Peso (%)</th></tr>
+                                    </thead>
+                                    <tbody id="pm-table-body" class="divide-y divide-gray-700/50"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="trade-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeTradeModal()"></div>
+        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-xl p-4">
+            <div class="bg-slate-900 border border-gray-700 rounded-2xl shadow-2xl p-6 relative">
+                <button onclick="closeTradeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="ph ph-x text-2xl"></i></button>
+                <h3 id="tm-title" class="text-xl font-bold text-white mb-2">Trade</h3>
+                <span id="tm-date" class="text-xs text-gray-500 bg-gray-800 px-2 py-1 rounded">Fecha</span>
+                <div class="mt-4 max-h-[60vh] overflow-y-auto">
+                    <img id="tm-img" src="" class="w-full rounded-lg mb-4 hidden">
+                    <p id="tm-body" class="text-gray-300 whitespace-pre-wrap leading-relaxed"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbxfdQWKQqdkVYaUv1woyCoxVkdu0tYgZDBQAORsoKjGKjKJue45A8JbQibb_b4R9DwS/exec"; 
+        // ==========================================
+        
+        const USER_CORRECTO = "Inviu";
+        const PASS_CORRECTO = "dracma2026";
+        let globalData = { carteras: [], trades: [] };
+        let currentModalChart = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            if(localStorage.getItem("dracma_logged_in") === "true") ocultarLogin();
+        });
+
+        function intentarLogin(e) {
+            e.preventDefault();
+            if (document.getElementById("input-user").value === USER_CORRECTO && 
+                document.getElementById("input-pass").value === PASS_CORRECTO) {
+                localStorage.setItem("dracma_logged_in", "true");
+                ocultarLogin();
+            } else { document.getElementById("error-msg").classList.remove("hidden"); }
+        }
+        function ocultarLogin() {
+            document.getElementById("login-screen").classList.add("hidden-login");
+            document.getElementById("main-body").classList.remove("overflow-hidden");
+            fetchData();
+        }
+        function logout() { localStorage.removeItem("dracma_logged_in"); location.reload(); }
+
+        async function fetchData() {
+            try {
+                const response = await fetch(SHEET_API_URL);
+                globalData = await response.json();
+                renderPortfolios(globalData.carteras);
+                renderTrades(globalData.trades);
+            } catch (error) { console.error(error); }
+        }
+
+        function renderPortfolios(carteras) {
+            const container = document.getElementById('portfolio-grid');
+            container.innerHTML = ''; 
+            carteras.forEach((cartera, index) => {
+                const chartId = `mini-chart-${index}`;
+                container.insertAdjacentHTML('beforeend', `
+                    <div onclick="openPortfolioModal(${index})" class="glass-panel rounded-2xl p-6 flex flex-col card-hover group">
+                        <div class="flex justify-between items-start mb-4">
+                            <div><h3 class="text-lg font-bold text-white group-hover:text-blue-400 transition">${cartera.nombre}</h3><p class="text-gray-400 text-xs mt-1 truncate w-40">${cartera.descripcion}</p></div>
+                            <i class="ph-bold ph-arrows-out-simple text-gray-500 group-hover:text-white"></i>
+                        </div>
+                        <div class="relative h-40 w-full"><canvas id="${chartId}"></canvas></div>
+                    </div>`);
+                new Chart(document.getElementById(chartId).getContext('2d'), {
+                    type: 'doughnut', data: { labels: cartera.activos, datasets: [{ data: cartera.porcentajes, backgroundColor: cartera.activos.map((_, i) => getColor(i)), borderWidth: 0 }] },
+                    options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } }
+                });
+            });
+        }
+
+        function renderTrades(trades) {
+            const container = document.getElementById('trades-grid');
+            container.innerHTML = '';
+            trades.forEach(trade => {
+                const safeTesis = trade.tesis.replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+                const safeTitle = trade.titulo.replace(/'/g, "&apos;");
+                container.insertAdjacentHTML('beforeend', `
+                    <div class="glass-panel rounded-2xl p-6 card-hover border-l-4 border-blue-500">
+                        <div class="flex justify-between mb-2"><span class="text-xs font-mono text-blue-400 uppercase">Trade Idea</span><span class="text-xs text-gray-500">${new Date(trade.fecha).toLocaleDateString()}</span></div>
+                        <h3 class="text-xl font-bold text-white mb-2">${trade.titulo}</h3>
+                        <button onclick="openTradeModal('${safeTitle}', '${trade.fecha}', '${safeTesis}', '${trade.imagen}')" class="text-sm text-gray-400 hover:text-white flex items-center gap-1 mt-4">Ver análisis <i class="ph-bold ph-arrow-right"></i></button>
+                    </div>`);
+            });
+        }
+
+        function openPortfolioModal(index) {
+            const cartera = globalData.carteras[index];
+            document.getElementById('pm-title').innerText = cartera.nombre;
+            document.getElementById('pm-desc').innerText = cartera.descripcion;
+            document.getElementById('pdf-timestamp').innerText = "Vista: " + new Date().toLocaleString();
+            const tbody = document.getElementById('pm-table-body');
+            tbody.innerHTML = '';
+            cartera.activos.forEach((activo, i) => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-800/50 transition group">
+                        <td class="px-6 py-4 flex items-center gap-3"><span class="w-3 h-3 rounded-full ring-2 ring-transparent group-hover:ring-white/20" style="background-color: ${getColor(i)}"></span><span class="font-medium text-gray-200">${activo}</span></td>
+                        <td class="px-6 py-4 text-right font-mono text-blue-300 font-bold">${cartera.porcentajes[i]}%</td>
+                    </tr>`;
+            });
+            if (currentModalChart) currentModalChart.destroy();
+            const ctx = document.getElementById('modal-chart').getContext('2d');
+            currentModalChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: { labels: cartera.activos, datasets: [{ data: cartera.porcentajes, backgroundColor: cartera.activos.map((_, i) => getColor(i)), borderColor: '#0f172a', borderWidth: 0, hoverOffset: 10 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.9)', padding: 12, bodyFont: { size: 14 } } } }
+            });
+            document.getElementById('portfolio-modal').classList.remove('hidden');
+        }
+        function closePortfolioModal() { document.getElementById('portfolio-modal').classList.add('hidden'); }
+
+        // --- SOLUCIÓN DE CENTRADO PDF (VERSIÓN 11 - ROBUSTA) ---
+        function downloadPortfolioPDF() {
+            const element = document.getElementById('printable-area');
+            const grid = document.getElementById('modal-content-grid');
+            const btn = document.getElementById('btn-download-pdf');
+            const tbody = document.getElementById('pm-table-body');
+            const originalBtnText = btn.innerHTML;
+
+            // 1. Scroll al inicio (Crucial para que html2pdf no salga en blanco)
+            window.scrollTo(0, 0);
+
+            btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Generando...';
+            document.getElementById('pdf-timestamp').innerText = "Reporte Generado: " + new Date().toLocaleString('es-ES');
+            
+            // 2. APLICAR TRANSFORMACIONES FÍSICAS (Sin positions absolutes)
+            // Forzamos un ancho fijo que sabemos que entra en A4
+            element.classList.add('pdf-fixed-width');
+            
+            // Forzamos Grid lado a lado (incluso si la pantalla es chica)
+            grid.classList.remove('md:grid-cols-2'); 
+            grid.classList.add('pdf-grid-layout');
+            
+            // Compactamos la tabla
+            tbody.classList.add('pdf-table-compact');
+
+            const title = document.getElementById('pm-title').innerText.replace(/\s+/g, '_');
+            const opt = {
+                margin: [10, 10], 
+                filename: `Dracma_${title}.pdf`, 
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, backgroundColor: '#0f172a', scrollX: 0, scrollY: 0 }, 
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                // 3. LIMPIEZA Y RESTAURACIÓN
+                element.classList.remove('pdf-fixed-width');
+                grid.classList.remove('pdf-grid-layout');
+                grid.classList.add('md:grid-cols-2');
+                tbody.classList.remove('pdf-table-compact');
+                btn.innerHTML = originalBtnText;
+            });
+        }
+
+        function openTradeModal(title, date, tesis, img) {
+            document.getElementById('tm-title').innerText = title;
+            document.getElementById('tm-date').innerText = new Date(date).toLocaleDateString();
+            document.getElementById('tm-body').innerHTML = tesis;
+            const imgEl = document.getElementById('tm-img');
+            if(img && img.length > 5) { imgEl.src = img; imgEl.classList.remove('hidden'); } else { imgEl.classList.add('hidden'); }
+            document.getElementById('trade-modal').classList.remove('hidden');
+        }
+        function closeTradeModal() { document.getElementById('trade-modal').classList.add('hidden'); }
+        function getColor(i) { return ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#6366f1', '#14b8a6'][i % 9]; }
+    </script>
+</body>
+</html>
