@@ -24,6 +24,10 @@
         .pdf-fixed-width { width: 750px !important; margin: 0 auto !important; background-color: #0f172a !important; border: none !important; box-shadow: none !important; }
         .pdf-grid-layout { display: grid !important; grid-template-columns: 45% 55% !important; gap: 20px !important; align-items: start !important; }
         .pdf-table-compact td, .pdf-table-compact th { padding: 4px 8px !important; font-size: 10px !important; }
+
+        /* Animación Notificación */
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .notification-anim { animation: slideIn 0.5s ease-out forwards; }
     </style>
 </head>
 <body class="antialiased min-h-screen flex flex-col overflow-hidden" id="main-body">
@@ -47,11 +51,23 @@
         </div>
     </div>
 
+    <div id="notification-toast" class="fixed top-24 right-5 z-50 hidden max-w-sm w-full">
+        <div class="glass-panel p-4 rounded-xl border-l-4 border-blue-500 shadow-2xl flex items-start gap-4 notification-anim">
+            <div class="bg-blue-500/20 p-2 rounded-full text-blue-400">
+                <i class="ph-fill ph-bell-ringing text-xl"></i>
+            </div>
+            <div class="flex-1">
+                <h4 class="text-sm font-bold text-white uppercase tracking-wider mb-1">Novedad</h4>
+                <p id="notif-text" class="text-sm text-gray-300 leading-snug"></p>
+            </div>
+            <button onclick="closeNotification()" class="text-gray-500 hover:text-white transition"><i class="ph-bold ph-x"></i></button>
+        </div>
+    </div>
+
     <nav class="border-b border-gray-800 bg-slate-900/80 sticky top-0 z-30 backdrop-blur-md">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
             <div class="flex items-center gap-3">
                 <img src="logo.png" class="w-8 h-8 rounded-full border border-blue-500/50 object-cover" alt="I-Desk Logo">
-                
                 <span class="text-lg md:text-xl font-bold tracking-tight text-white">I-Desk <span class="text-blue-500">Asset Management</span></span>
             </div>
             <div class="hidden md:flex space-x-8 text-sm font-medium">
@@ -81,7 +97,6 @@
     <div id="portfolio-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closePortfolioModal()"></div>
         <div class="relative bg-slate-900 border border-gray-700 rounded-2xl w-full max-w-5xl max-h-[95vh] overflow-y-auto shadow-2xl flex flex-col">
-            
             <div class="flex justify-between items-center p-4 border-b border-gray-800 bg-slate-800/50 sticky top-0 z-10">
                 <h3 class="text-gray-400 text-sm font-mono">VISTA DE DETALLE</h3>
                 <div class="flex gap-2">
@@ -94,7 +109,6 @@
             
             <div class="w-full flex justify-center bg-slate-900">
                 <div id="printable-area" class="p-8 md:p-12 text-white w-full transition-all duration-300">
-                    
                     <div class="flex justify-between items-start mb-8 border-b border-gray-700 pb-6">
                         <div>
                             <span class="text-blue-500 font-bold text-sm tracking-widest uppercase">PORTAFOLIO</span>
@@ -108,11 +122,9 @@
                     </div>
 
                     <div id="modal-content-grid" class="grid grid-cols-1 md:grid-cols-2 gap-10 items-center mb-8">
-                        
                         <div id="chart-container-div" class="h-80 w-full flex items-center justify-center relative">
                             <canvas id="modal-chart"></canvas>
                         </div>
-                        
                         <div class="w-full">
                             <div class="flex items-center gap-3 mb-4">
                                 <div class="h-6 w-1 bg-blue-500 rounded-full"></div>
@@ -124,7 +136,7 @@
                                         <tr><th class="px-6 py-4">Activo</th><th class="px-6 py-4 text-right">Peso (%)</th></tr>
                                     </thead>
                                     <tbody id="pm-table-body" class="divide-y divide-gray-700/50"></tbody>
-                                    </table>
+                                </table>
                                 <div class="p-3 bg-blue-900/20 text-blue-200 text-[10px] text-center border-t border-gray-700">
                                     Los rendimientos pasados no garantizan resultados futuros. Gestión activa.
                                 </div>
@@ -143,7 +155,6 @@
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
@@ -178,7 +189,7 @@
         const USER_CORRECTO = "admin";
         const PASS_CORRECTO = "idesk2026";
         
-        let globalData = { carteras: [], trades: [] };
+        let globalData = { carteras: [], trades: [], notificacion: "" };
         let currentModalChart = null;
 
         document.addEventListener("DOMContentLoaded", () => {
@@ -206,8 +217,19 @@
                 globalData = await response.json();
                 renderPortfolios(globalData.carteras);
                 renderTrades(globalData.trades);
+                checkNotification(globalData.notificacion);
             } catch (error) { console.error(error); }
         }
+
+        // --- SISTEMA DE NOTIFICACIONES ---
+        function checkNotification(message) {
+            const toast = document.getElementById('notification-toast');
+            if (message && message.trim() !== "") {
+                document.getElementById('notif-text').innerText = message;
+                toast.classList.remove('hidden');
+            } else { toast.classList.add('hidden'); }
+        }
+        function closeNotification() { document.getElementById('notification-toast').classList.add('hidden'); }
 
         function renderPortfolios(carteras) {
             const container = document.getElementById('portfolio-grid');
@@ -229,17 +251,17 @@
             });
         }
 
+        // --- CORRECCIÓN AQUÍ: Uso de índice en vez de strings para evitar errores ---
         function renderTrades(trades) {
             const container = document.getElementById('trades-grid');
             container.innerHTML = '';
-            trades.forEach(trade => {
-                const safeTesis = trade.tesis.replace(/'/g, "&apos;").replace(/"/g, "&quot;");
-                const safeTitle = trade.titulo.replace(/'/g, "&apos;");
+            trades.forEach((trade, index) => {
+                const dateDisplay = new Date(trade.fecha).toLocaleDateString();
                 container.insertAdjacentHTML('beforeend', `
                     <div class="glass-panel rounded-2xl p-6 card-hover border-l-4 border-blue-500">
-                        <div class="flex justify-between mb-2"><span class="text-xs font-mono text-blue-400 uppercase">Trade Idea</span><span class="text-xs text-gray-500">${new Date(trade.fecha).toLocaleDateString()}</span></div>
+                        <div class="flex justify-between mb-2"><span class="text-xs font-mono text-blue-400 uppercase">Trade Idea</span><span class="text-xs text-gray-500">${dateDisplay}</span></div>
                         <h3 class="text-xl font-bold text-white mb-2">${trade.titulo}</h3>
-                        <button onclick="openTradeModal('${safeTitle}', '${trade.fecha}', '${safeTesis}', '${trade.imagen}')" class="text-sm text-gray-400 hover:text-white flex items-center gap-1 mt-4">Ver análisis <i class="ph-bold ph-arrow-right"></i></button>
+                        <button onclick="openTradeModal(${index})" class="text-sm text-gray-400 hover:text-white flex items-center gap-1 mt-4">Ver análisis <i class="ph-bold ph-arrow-right"></i></button>
                     </div>`);
             });
         }
@@ -250,7 +272,6 @@
             document.getElementById('pm-desc').innerText = cartera.descripcion;
             document.getElementById('pdf-timestamp').innerText = "Vista: " + new Date().toLocaleString();
             
-            // Tabla
             const tbody = document.getElementById('pm-table-body');
             tbody.innerHTML = '';
             cartera.activos.forEach((activo, i) => {
@@ -261,15 +282,12 @@
                     </tr>`;
             });
 
-            // Movimientos
             const movDiv = document.getElementById('movimientos-wrapper');
             const movText = document.getElementById('pm-movimientos');
             if (cartera.movimientos && cartera.movimientos.trim().length > 0) {
                 movText.innerText = cartera.movimientos;
                 movDiv.classList.remove('hidden');
-            } else {
-                movDiv.classList.add('hidden');
-            }
+            } else { movDiv.classList.add('hidden'); }
 
             if (currentModalChart) currentModalChart.destroy();
             const ctx = document.getElementById('modal-chart').getContext('2d');
@@ -282,33 +300,25 @@
         }
         function closePortfolioModal() { document.getElementById('portfolio-modal').classList.add('hidden'); }
 
-        // --- PDF GENERATOR ---
         function downloadPortfolioPDF() {
             const element = document.getElementById('printable-area');
             const grid = document.getElementById('modal-content-grid');
             const btn = document.getElementById('btn-download-pdf');
             const tbody = document.getElementById('pm-table-body');
             const originalBtnText = btn.innerHTML;
-
             window.scrollTo(0, 0);
-
             btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Generando...';
             document.getElementById('pdf-timestamp').innerText = "Reporte Generado: " + new Date().toLocaleString('es-ES');
-            
             element.classList.add('pdf-fixed-width');
             grid.classList.remove('md:grid-cols-2'); 
             grid.classList.add('pdf-grid-layout');
             tbody.classList.add('pdf-table-compact');
-
             const title = document.getElementById('pm-title').innerText.replace(/\s+/g, '_');
             const opt = {
-                margin: [10, 10], 
-                filename: `IDesk_${title}.pdf`, 
-                image: { type: 'jpeg', quality: 0.98 },
+                margin: [10, 10], filename: `IDesk_${title}.pdf`, image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2, useCORS: true, backgroundColor: '#0f172a', scrollX: 0, scrollY: 0 }, 
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
             };
-
             html2pdf().set(opt).from(element).save().then(() => {
                 element.classList.remove('pdf-fixed-width');
                 grid.classList.remove('pdf-grid-layout');
@@ -318,12 +328,14 @@
             });
         }
 
-        function openTradeModal(title, date, tesis, img) {
-            document.getElementById('tm-title').innerText = title;
-            document.getElementById('tm-date').innerText = new Date(date).toLocaleDateString();
-            document.getElementById('tm-body').innerHTML = tesis;
+        // --- CORRECCIÓN AQUÍ: Recibe índice y busca datos ---
+        function openTradeModal(index) {
+            const trade = globalData.trades[index];
+            document.getElementById('tm-title').innerText = trade.titulo;
+            document.getElementById('tm-date').innerText = new Date(trade.fecha).toLocaleDateString();
+            document.getElementById('tm-body').innerHTML = trade.tesis;
             const imgEl = document.getElementById('tm-img');
-            if(img && img.length > 5) { imgEl.src = img; imgEl.classList.remove('hidden'); } else { imgEl.classList.add('hidden'); }
+            if(trade.imagen && trade.imagen.length > 5) { imgEl.src = trade.imagen; imgEl.classList.remove('hidden'); } else { imgEl.classList.add('hidden'); }
             document.getElementById('trade-modal').classList.remove('hidden');
         }
         function closeTradeModal() { document.getElementById('trade-modal').classList.add('hidden'); }
