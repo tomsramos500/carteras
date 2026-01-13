@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dracma Asset Management | Terminal</title>
+    <title>I-Desk | Terminal</title>
+    
+    <link rel="icon" type="image/png" href="logo.png">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -17,26 +20,10 @@
         #login-screen { transition: opacity 0.5s ease-out, visibility 0.5s; }
         .hidden-login { opacity: 0; visibility: hidden; pointer-events: none; }
         
-        /* ESTILOS CLAVE PARA PDF */
-        .pdf-fixed-width {
-            width: 750px !important;    /* Ancho exacto para A4 */
-            margin: 0 auto !important;  /* Centrado */
-            background-color: #0f172a !important; /* Fondo sólido oscuro */
-            border: none !important;
-            box-shadow: none !important;
-        }
-        
-        .pdf-grid-layout {
-            display: grid !important;
-            grid-template-columns: 45% 55% !important; /* Gráfico 45%, Tabla 55% */
-            gap: 20px !important;
-            align-items: center !important;
-        }
-        
-        .pdf-table-compact td, .pdf-table-compact th {
-            padding: 4px 8px !important; /* Celdas más compactas */
-            font-size: 10px !important;  /* Texto un poco más chico para que entre */
-        }
+        /* ESTILOS PDF */
+        .pdf-fixed-width { width: 750px !important; margin: 0 auto !important; background-color: #0f172a !important; border: none !important; box-shadow: none !important; }
+        .pdf-grid-layout { display: grid !important; grid-template-columns: 45% 55% !important; gap: 20px !important; align-items: start !important; }
+        .pdf-table-compact td, .pdf-table-compact th { padding: 4px 8px !important; font-size: 10px !important; }
     </style>
 </head>
 <body class="antialiased min-h-screen flex flex-col overflow-hidden" id="main-body">
@@ -45,9 +32,11 @@
         <div class="glass-panel p-8 rounded-2xl w-full max-w-md border border-gray-700 shadow-2xl relative overflow-hidden">
             <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent"></div>
             <div class="text-center mb-8">
-                <i class="ph-fill ph-lock-key text-4xl text-blue-500 mb-4 inline-block"></i>
+                <div class="flex justify-center mb-4">
+                    <img src="logo.png" class="w-20 h-20 rounded-full shadow-lg border-2 border-blue-500/30 object-cover" alt="Logo">
+                </div>
                 <h2 class="text-2xl font-bold text-white">Acceso Privado</h2>
-                <p class="text-gray-400 text-sm mt-2">Dracma Asset Management</p>
+                <p class="text-gray-400 text-sm mt-2">I-Desk Asset Management</p>
             </div>
             <form onsubmit="intentarLogin(event)" class="space-y-4">
                 <input type="text" id="input-user" class="w-full bg-slate-900 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-600" placeholder="Usuario">
@@ -60,9 +49,10 @@
 
     <nav class="border-b border-gray-800 bg-slate-900/80 sticky top-0 z-30 backdrop-blur-md">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-2">
-                <i class="ph-fill ph-chart-polar text-blue-500 text-2xl"></i>
-                <span class="text-lg md:text-xl font-bold tracking-tight text-white">Dracma <span class="text-blue-500">Asset Management</span></span>
+            <div class="flex items-center gap-3">
+                <img src="logo.png" class="w-8 h-8 rounded-full border border-blue-500/50 object-cover" alt="I-Desk Logo">
+                
+                <span class="text-lg md:text-xl font-bold tracking-tight text-white">I-Desk <span class="text-blue-500">Asset Management</span></span>
             </div>
             <div class="hidden md:flex space-x-8 text-sm font-medium">
                 <a href="#carteras" class="text-gray-400 hover:text-white transition">Carteras</a>
@@ -73,8 +63,8 @@
     </nav>
 
     <header class="py-16 text-center container mx-auto px-6">
-        <h1 class="text-4xl md:text-5xl font-bold mb-4 text-white">Carteras Administradas</h1>
-        <p class="text-gray-400">Selecciona una cartera para ver el desglose detallado.</p>
+        <h1 class="text-4xl md:text-5xl font-bold mb-4 text-white">Ecosistema de Inversión</h1>
+        <p class="text-gray-400">Selecciona una cartera para ver el desglose detallado o descargar el reporte.</p>
     </header>
 
     <section id="carteras" class="container mx-auto px-6 mb-16">
@@ -112,18 +102,18 @@
                             <p id="pm-desc" class="text-gray-400 mt-3 max-w-xl leading-relaxed text-lg">Descripción...</p>
                         </div>
                         <div class="text-right hidden sm:block">
-                            <div class="text-xl font-bold text-white">Dracma <span class="text-blue-500">Asset Management</span></div>
+                            <div class="text-xl font-bold text-white">I-Desk <span class="text-blue-500">Asset Management</span></div>
                             <div id="pdf-timestamp" class="text-xs text-gray-500 mt-1 font-mono"></div>
                         </div>
                     </div>
 
-                    <div id="modal-content-grid" class="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+                    <div id="modal-content-grid" class="grid grid-cols-1 md:grid-cols-2 gap-10 items-center mb-8">
                         
                         <div id="chart-container-div" class="h-80 w-full flex items-center justify-center relative">
                             <canvas id="modal-chart"></canvas>
                         </div>
                         
-                        <div id="table-container-div" class="w-full">
+                        <div class="w-full">
                             <div class="flex items-center gap-3 mb-4">
                                 <div class="h-6 w-1 bg-blue-500 rounded-full"></div>
                                 <h4 class="text-lg font-bold">Composición de Activos</h4>
@@ -134,10 +124,26 @@
                                         <tr><th class="px-6 py-4">Activo</th><th class="px-6 py-4 text-right">Peso (%)</th></tr>
                                     </thead>
                                     <tbody id="pm-table-body" class="divide-y divide-gray-700/50"></tbody>
-                                </table>
+                                    </table>
+                                <div class="p-3 bg-blue-900/20 text-blue-200 text-[10px] text-center border-t border-gray-700">
+                                    Los rendimientos pasados no garantizan resultados futuros. Gestión activa.
+                                </div>
                             </div>
                         </div>
                     </div>
+
+                    <div id="movimientos-wrapper" class="hidden">
+                        <div class="border-t border-gray-700 pt-6 mt-6">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="h-6 w-1 bg-emerald-500 rounded-full"></div>
+                                <h4 class="text-lg font-bold">Últimos Movimientos Estratégicos</h4>
+                            </div>
+                            <div class="bg-slate-800/30 border border-gray-700 rounded-xl p-6 w-full">
+                                <p id="pm-movimientos" class="text-gray-300 text-sm leading-relaxed font-mono"></p>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -158,25 +164,32 @@
         </div>
     </div>
 
+    <footer class="mt-auto py-8 border-t border-gray-800 text-center text-gray-500 text-sm">
+        <p>&copy; 2026 I-Desk Asset Management. Datos provistos vía Google Sheets API.</p>
+    </footer>
+
     <script>
+        // ==========================================
+        //  PEGAR TU URL DE APPS SCRIPT AQUÍ
         // ==========================================
         const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbxfdQWKQqdkVYaUv1woyCoxVkdu0tYgZDBQAORsoKjGKjKJue45A8JbQibb_b4R9DwS/exec"; 
         // ==========================================
         
-        const USER_CORRECTO = "Inviu";
-        const PASS_CORRECTO = "dracma2026";
+        const USER_CORRECTO = "admin";
+        const PASS_CORRECTO = "idesk2026";
+        
         let globalData = { carteras: [], trades: [] };
         let currentModalChart = null;
 
         document.addEventListener("DOMContentLoaded", () => {
-            if(localStorage.getItem("dracma_logged_in") === "true") ocultarLogin();
+            if(localStorage.getItem("idesk_logged_in") === "true") ocultarLogin();
         });
 
         function intentarLogin(e) {
             e.preventDefault();
             if (document.getElementById("input-user").value === USER_CORRECTO && 
                 document.getElementById("input-pass").value === PASS_CORRECTO) {
-                localStorage.setItem("dracma_logged_in", "true");
+                localStorage.setItem("idesk_logged_in", "true");
                 ocultarLogin();
             } else { document.getElementById("error-msg").classList.remove("hidden"); }
         }
@@ -185,7 +198,7 @@
             document.getElementById("main-body").classList.remove("overflow-hidden");
             fetchData();
         }
-        function logout() { localStorage.removeItem("dracma_logged_in"); location.reload(); }
+        function logout() { localStorage.removeItem("idesk_logged_in"); location.reload(); }
 
         async function fetchData() {
             try {
@@ -236,6 +249,8 @@
             document.getElementById('pm-title').innerText = cartera.nombre;
             document.getElementById('pm-desc').innerText = cartera.descripcion;
             document.getElementById('pdf-timestamp').innerText = "Vista: " + new Date().toLocaleString();
+            
+            // Tabla
             const tbody = document.getElementById('pm-table-body');
             tbody.innerHTML = '';
             cartera.activos.forEach((activo, i) => {
@@ -245,6 +260,17 @@
                         <td class="px-6 py-4 text-right font-mono text-blue-300 font-bold">${cartera.porcentajes[i]}%</td>
                     </tr>`;
             });
+
+            // Movimientos
+            const movDiv = document.getElementById('movimientos-wrapper');
+            const movText = document.getElementById('pm-movimientos');
+            if (cartera.movimientos && cartera.movimientos.trim().length > 0) {
+                movText.innerText = cartera.movimientos;
+                movDiv.classList.remove('hidden');
+            } else {
+                movDiv.classList.add('hidden');
+            }
+
             if (currentModalChart) currentModalChart.destroy();
             const ctx = document.getElementById('modal-chart').getContext('2d');
             currentModalChart = new Chart(ctx, {
@@ -256,7 +282,7 @@
         }
         function closePortfolioModal() { document.getElementById('portfolio-modal').classList.add('hidden'); }
 
-        // --- SOLUCIÓN DE CENTRADO PDF (VERSIÓN 11 - ROBUSTA) ---
+        // --- PDF GENERATOR ---
         function downloadPortfolioPDF() {
             const element = document.getElementById('printable-area');
             const grid = document.getElementById('modal-content-grid');
@@ -264,34 +290,26 @@
             const tbody = document.getElementById('pm-table-body');
             const originalBtnText = btn.innerHTML;
 
-            // 1. Scroll al inicio (Crucial para que html2pdf no salga en blanco)
             window.scrollTo(0, 0);
 
             btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Generando...';
             document.getElementById('pdf-timestamp').innerText = "Reporte Generado: " + new Date().toLocaleString('es-ES');
             
-            // 2. APLICAR TRANSFORMACIONES FÍSICAS (Sin positions absolutes)
-            // Forzamos un ancho fijo que sabemos que entra en A4
             element.classList.add('pdf-fixed-width');
-            
-            // Forzamos Grid lado a lado (incluso si la pantalla es chica)
             grid.classList.remove('md:grid-cols-2'); 
             grid.classList.add('pdf-grid-layout');
-            
-            // Compactamos la tabla
             tbody.classList.add('pdf-table-compact');
 
             const title = document.getElementById('pm-title').innerText.replace(/\s+/g, '_');
             const opt = {
                 margin: [10, 10], 
-                filename: `Dracma_${title}.pdf`, 
+                filename: `IDesk_${title}.pdf`, 
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2, useCORS: true, backgroundColor: '#0f172a', scrollX: 0, scrollY: 0 }, 
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
             };
 
             html2pdf().set(opt).from(element).save().then(() => {
-                // 3. LIMPIEZA Y RESTAURACIÓN
                 element.classList.remove('pdf-fixed-width');
                 grid.classList.remove('pdf-grid-layout');
                 grid.classList.add('md:grid-cols-2');
